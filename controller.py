@@ -12,7 +12,7 @@ class Controller():
         self._view = view
 
     def draw(self) -> None:
-        self._view.draw(self._model.get_storehouse(), self._model.get_worker())
+        self._view.draw(self._model.get_playground(), self._model.get_cat())
         print()
 
     def prompt_user(self) -> str:
@@ -24,8 +24,8 @@ class Controller():
     def play(self) -> None:
         while True:
             self.draw()
-            if self._model.storehouse_finished():
-                if self._model._cur_lv + 1 < self._model.get_num_storehouses():
+            if self._model.playground_messed():
+                if self._model._cur_lv + 1 < self._model.get_num_playgrounds():
                     self._model.level_up()
                     _ = input(PRESS_ANY)
                     continue
@@ -35,6 +35,6 @@ class Controller():
 
             command = self.prompt_user()
             if command in MOVES:
-                self._model.move_worker(MOVES[command])
+                self._model.move_cat(MOVES[command])
             elif command == END_GAME:
                 return

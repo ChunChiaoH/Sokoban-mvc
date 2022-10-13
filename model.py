@@ -62,15 +62,15 @@ class MoveableEntity:
         self._col += delta[1]
 
 
-class Box(MoveableEntity):
-    _text = BOX
+class Glass(MoveableEntity):
+    _text = GLASS
 
     def __init__(self, pos: tuple[int, int]) -> None:
         super().__init__(pos)
 
 
-class Worker(MoveableEntity):
-    _text = WORKER
+class Cat(MoveableEntity):
+    _text = CAT
 
     def __init__(self,
                  pos: tuple[int, int],
@@ -83,49 +83,49 @@ class Worker(MoveableEntity):
         return self._tiredness > self._max_tiredness
 
 
-class Storehouse:
+class Playground:
     TILES = {WALL: Wall, EMPTY: Empty, DEST: Dest}
 
     def __init__(self, row: int, col: int) -> None:
         self._dimension = (row, col)
         self._tiles = []
         self._dest_filled = {}
-        self._boxes = {}
-        self._worker_start = None
+        self._glasses = {}
+        self._cat_start = None
 
-    def set_storehouse(self, tiles: list[str]):
+    def set_playground(self, tiles: list[str]):
         self._tiles = [[self.TILES.get(tile, Empty)()
                         for tile in row] for row in tiles]
         self._dest_filled = {(i, j): False
                              for i, row in enumerate(tiles) for j, col in enumerate(row) if col == DEST}
-        self._boxes = {(i, j): Box((i, j))
-                       for i, row in enumerate(tiles) for j, col in enumerate(row) if col == BOX}
-        self._worker_start = [(i, j)
-                              for i, row in enumerate(tiles) for j, col in enumerate(row) if col == WORKER][0]
+        self._glasses = {(i, j): Glass((i, j))
+                         for i, row in enumerate(tiles) for j, col in enumerate(row) if col == GLASS}
+        self._cat_start = [(i, j)
+                           for i, row in enumerate(tiles) for j, col in enumerate(row) if col == CAT][0]
 
     def get_dimension(self) -> tuple[int, int]:
         return self._dimension
 
-    def get_worker_start(self) -> tuple[int, int]:
-        return self._worker_start
+    def get_cat_start(self) -> tuple[int, int]:
+        return self._cat_start
 
-    def get_boxes(self) -> dict[tuple[int, int]: Box]:
-        return self._boxes
+    def get_glasses(self) -> dict[tuple[int, int]: Glass]:
+        return self._glasses
 
-    def get_box(self, row: int, col: int) -> Box:
-        return self._boxes[(row, col)]
+    def get_glass(self, row: int, col: int) -> Glass:
+        return self._glasses[(row, col)]
 
     def get_tile(self, row: int, col: int) -> str:
         return self._tiles[row][col]
 
-    def move_box(self, box: Box, delta: tuple[int, int]) -> None:
-        del self._boxes[box.get_pos()]
+    def move_glass(self, box: Glass, delta: tuple[int, int]) -> None:
+        del self._glasses[box.get_pos()]
         box.move(delta)
-        self._boxes[box.get_pos()] = box
+        self._glasses[box.get_pos()] = box
 
     def update_dests(self) -> None:
         for k in self._dest_filled:
-            self._dest_filled[k] = True if k in self._boxes else False
+            self._dest_filled[k] = True if k in self._glasses else False
 
     def all_filled(self) -> bool:
         return all(self._dest_filled.values())
@@ -138,74 +138,74 @@ class Model:
     def __init__(self, game_dir: str):
 
         self._game_dir = game_dir
-        self._storehouses = os.listdir(self._game_dir)
-        self._num_storehouses = len(self._storehouses)
+        self._playground = os.listdir(self._game_dir)
+        self._num_playgrounds = len(self._playground)
         self._cur_lv = 0
-        self._cur_storehouse = None
-        self._worker = None
+        self._cur_playground = None
+        self._cat = None
         self.load_game()
 
     def load_game(self) -> None:
-        with open(os.path.join(os.getcwd(), self._game_dir, self._storehouses[self._cur_lv])) as tiles:
+        with open(os.path.join(os.getcwd(), self._game_dir, self._playground[self._cur_lv])) as tiles:
             cols = []
             for col in tiles:
                 cols.append(col.strip('\n'))
             num_rows, num_cols = len(cols), len(cols[0])
-            storehouse = Storehouse(num_rows, num_cols)
-            storehouse.set_storehouse(cols)
-            self._worker = Worker(storehouse.get_worker_start())
-            self._cur_storehouse = storehouse
+            playground = Playground(num_rows, num_cols)
+            playground.set_playground(cols)
+            self._cat = Cat(playground.get_cat_start())
+            self._cur_playground = playground
 
-    def set_player(self, player_pos: tuple[int, int]) -> None:
-        self._worker = Worker(player_pos)
+    def set_cat(self, player_pos: tuple[int, int]) -> None:
+        self._cat = Cat(player_pos)
 
-    def get_num_storehouses(self) -> int:
-        return self._num_storehouses
+    def get_num_playgrounds(self) -> int:
+        return self._num_playgrounds
 
     def get_cur_lv(self) -> int:
         return self._cur_lv
 
-    def get_worker(self) -> Worker:
-        return self._worker
+    def get_cat(self) -> Cat:
+        return self._cat
 
-    def get_storehouse(self) -> Storehouse:
-        return self._cur_storehouse
+    def get_playground(self) -> Playground:
+        return self._cur_playground
 
     def level_up(self) -> None:
         self._cur_lv += 1
         self.load_game()
 
-    def storehouse_finished(self) -> bool:
-        return self._cur_storehouse.all_filled()
+    def playground_messed(self) -> bool:
+        return self._cur_playground.all_filled()
 
-    def attempt_push_box(self, box: Box, delta: tuple[int, int]) -> None:
+    def attempt_push_glass(self, box: Glass, delta: tuple[int, int]) -> None:
         row, col = box.get_pos()
         target_row, target_col = row + delta[0], col + delta[1]
-        if self._cur_storehouse.tile_passable(target_row, target_col) and \
-                (target_row, target_col) not in self._cur_storehouse.get_boxes() and \
+        if self._cur_playground.tile_passable(target_row, target_col) and \
+                (target_row, target_col) not in self._cur_playground.get_glasses() and \
                 self.within_boundary(target_row, target_col):
-            self._cur_storehouse.move_box(box, delta)
-            self._cur_storehouse.update_dests()
+            self._cur_playground.move_glass(box, delta)
+            self._cur_playground.update_dests()
             return True
         return False
 
     def within_boundary(self, row: int, col: int) -> bool:
-        max_row, max_col = self._cur_storehouse.get_dimension()
+        max_row, max_col = self._cur_playground.get_dimension()
         if row < 0 or col < 0 or row >= max_row or col >= max_col:
             return False
         return True
 
-    def move_worker(self, delta: tuple[int, int]) -> None:
-        cur_row, cur_col = self._worker.get_pos()
+    def move_cat(self, delta: tuple[int, int]) -> None:
+        cur_row, cur_col = self._cat.get_pos()
         target_row, target_col = cur_row + delta[0], cur_col + delta[1]
-        target_tile = self._cur_storehouse.get_tile(target_row, target_col)
+        target_tile = self._cur_playground.get_tile(target_row, target_col)
 
         if (not self.within_boundary(target_row, target_col)) or (not target_tile.is_passable()):
             return
 
-        # move box and the worker
-        if (target_row, target_col) in self._cur_storehouse.get_boxes().keys():
-            if self.attempt_push_box(self._cur_storehouse.get_box(target_row, target_col), delta):
-                self._worker.move(delta)
+        # move glass and the cat
+        if (target_row, target_col) in self._cur_playground.get_glasses().keys():
+            if self.attempt_push_glass(self._cur_playground.get_glass(target_row, target_col), delta):
+                self._cat.move(delta)
         else:
-            self._worker.move(delta)
+            self._cat.move(delta)

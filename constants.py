@@ -1,8 +1,8 @@
 DEST = '0'
 WALL = '+'
 EMPTY = ' '
-BOX = 'B'
-WORKER = 'W'
+GLASS = 'B'
+CAT = 'C'
 
 UP = 'w'
 DOWN = 's'
