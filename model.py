@@ -3,7 +3,7 @@ import os
 
 
 class BasicTile:
-    _text = EMPTY
+    _symbol = EMPTY
 
     def __init__(self) -> None:
         self._passable = True
@@ -12,7 +12,7 @@ class BasicTile:
         return self._passable
 
     def get_text(self) -> str:
-        return self._text
+        return self._symbol
 
 
 class Empty(BasicTile):
@@ -21,7 +21,7 @@ class Empty(BasicTile):
 
 
 class Wall(BasicTile):
-    _text = WALL
+    _symbol = WALL
 
     def __init__(self) -> None:
         super().__init__()
@@ -38,7 +38,7 @@ class Exit(Wall):
 
 
 class Dest(BasicTile):
-    _text = DEST
+    _symbol = DEST
 
     def __init__(self) -> None:
         super().__init__()
@@ -46,13 +46,13 @@ class Dest(BasicTile):
 
 
 class MoveableEntity:
-    _text = '_'
+    _symbol = MOVEABL_EENTITY
 
     def __init__(self, pos: tuple[int, int]) -> None:
         self._row, self._col = pos
 
     def get_text(self) -> str:
-        return self._text
+        return self._symbol
 
     def get_pos(self) -> tuple[int, int]:
         return self._row, self._col
@@ -63,14 +63,14 @@ class MoveableEntity:
 
 
 class Glass(MoveableEntity):
-    _text = GLASS
+    _symbol = GLASS
 
     def __init__(self, pos: tuple[int, int]) -> None:
         super().__init__(pos)
 
 
 class Cat(MoveableEntity):
-    _text = CAT
+    _symbol = CAT
 
     def __init__(self,
                  pos: tuple[int, int],
@@ -83,7 +83,7 @@ class Cat(MoveableEntity):
         return self._tiredness > self._max_tiredness
 
 
-class Playground:
+class Room:
     TILES = {WALL: Wall, EMPTY: Empty, DEST: Dest}
 
     def __init__(self, row: int, col: int) -> None:
@@ -138,59 +138,59 @@ class Model:
     def __init__(self, game_dir: str):
 
         self._game_dir = game_dir
-        self._playground = os.listdir(self._game_dir)
-        self._num_playgrounds = len(self._playground)
-        self._cur_lv = 0
-        self._cur_playground = None
+        self._rooms = os.listdir(self._game_dir)
+        self._num_rooms = len(self._rooms)
+        self._cur_room_num = 0
+        self._cur_room = None
         self._cat = None
         self.load_game()
 
     def load_game(self) -> None:
-        with open(os.path.join(os.getcwd(), self._game_dir, self._playground[self._cur_lv])) as tiles:
+        with open(os.path.join(os.getcwd(), self._game_dir, self._rooms[self._cur_room_num])) as tiles:
             cols = []
             for col in tiles:
                 cols.append(col.strip('\n'))
             num_rows, num_cols = len(cols), len(cols[0])
-            playground = Playground(num_rows, num_cols)
-            playground.set_playground(cols)
-            self._cat = Cat(playground.get_cat_start())
-            self._cur_playground = playground
+            room = Room(num_rows, num_cols)
+            room.set_playground(cols)
+            self._cat = Cat(room.get_cat_start())
+            self._cur_room = room
 
-    def set_cat(self, player_pos: tuple[int, int]) -> None:
-        self._cat = Cat(player_pos)
+    def set_cat(self, cat_pos: tuple[int, int]) -> None:
+        self._cat = Cat(cat_pos)
 
-    def get_num_playgrounds(self) -> int:
-        return self._num_playgrounds
+    def get_num_rooms(self) -> int:
+        return self._num_rooms
 
-    def get_cur_lv(self) -> int:
-        return self._cur_lv
+    def get_cur_room_num(self) -> int:
+        return self._cur_room_num
 
     def get_cat(self) -> Cat:
         return self._cat
 
-    def get_playground(self) -> Playground:
-        return self._cur_playground
+    def get_room(self) -> Room:
+        return self._cur_room
 
     def level_up(self) -> None:
-        self._cur_lv += 1
+        self._cur_room_num += 1
         self.load_game()
 
-    def playground_messed(self) -> bool:
-        return self._cur_playground.all_filled()
+    def room_messed(self) -> bool:
+        return self._cur_room.all_filled()
 
-    def attempt_push_glass(self, box: Glass, delta: tuple[int, int]) -> None:
-        row, col = box.get_pos()
+    def attempt_push_glass(self, glass: Glass, delta: tuple[int, int]) -> None:
+        row, col = glass.get_pos()
         target_row, target_col = row + delta[0], col + delta[1]
-        if self._cur_playground.tile_passable(target_row, target_col) and \
-                (target_row, target_col) not in self._cur_playground.get_glasses() and \
+        if self._cur_room.tile_passable(target_row, target_col) and \
+                (target_row, target_col) not in self._cur_room.get_glasses() and \
                 self.within_boundary(target_row, target_col):
-            self._cur_playground.move_glass(box, delta)
-            self._cur_playground.update_dests()
+            self._cur_room.move_glass(glass, delta)
+            self._cur_room.update_dests()
             return True
         return False
 
     def within_boundary(self, row: int, col: int) -> bool:
-        max_row, max_col = self._cur_playground.get_dimension()
+        max_row, max_col = self._cur_room.get_dimension()
         if row < 0 or col < 0 or row >= max_row or col >= max_col:
             return False
         return True
@@ -198,14 +198,14 @@ class Model:
     def move_cat(self, delta: tuple[int, int]) -> None:
         cur_row, cur_col = self._cat.get_pos()
         target_row, target_col = cur_row + delta[0], cur_col + delta[1]
-        target_tile = self._cur_playground.get_tile(target_row, target_col)
+        target_tile = self._cur_room.get_tile(target_row, target_col)
 
         if (not self.within_boundary(target_row, target_col)) or (not target_tile.is_passable()):
             return
 
         # move glass and the cat
-        if (target_row, target_col) in self._cur_playground.get_glasses().keys():
-            if self.attempt_push_glass(self._cur_playground.get_glass(target_row, target_col), delta):
+        if (target_row, target_col) in self._cur_room.get_glasses().keys():
+            if self.attempt_push_glass(self._cur_room.get_glass(target_row, target_col), delta):
                 self._cat.move(delta)
         else:
             self._cat.move(delta)

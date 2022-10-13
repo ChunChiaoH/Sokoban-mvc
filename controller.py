@@ -12,7 +12,7 @@ class Controller():
         self._view = view
 
     def draw(self) -> None:
-        self._view.draw(self._model.get_playground(), self._model.get_cat())
+        self._view.draw(self._model.get_room(), self._model.get_cat())
         print()
 
     def prompt_user(self) -> str:
@@ -24,8 +24,8 @@ class Controller():
     def play(self) -> None:
         while True:
             self.draw()
-            if self._model.playground_messed():
-                if self._model._cur_lv + 1 < self._model.get_num_playgrounds():
+            if self._model.room_messed():
+                if self._model._cur_room_num + 1 < self._model.get_num_rooms():
                     self._model.level_up()
                     _ = input(PRESS_ANY)
                     continue

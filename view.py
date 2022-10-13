@@ -1,5 +1,5 @@
 import tkinter as tk
-from model import Playground, Cat
+from model import Room, Cat
 from constants import *
 
 
@@ -8,7 +8,7 @@ class TextView:
         pass
 
     def draw(self,
-             playground: Playground,
+             playground: Room,
              cat: Cat) -> None:
         num_rows, num_cols = playground.get_dimension()
 
