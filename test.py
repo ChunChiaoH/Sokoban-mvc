@@ -12,7 +12,7 @@ btnframe.place(x = 450, y= 5 )
 def Mute():
     pass
 
-mute_image = Image.open("images/broken.png")
+mute_image = Image.open("images/glass.png")
 mute_image = mute_image.resize((50,50))
 mute_icon = ImageTk.PhotoImage(mute_image)
 

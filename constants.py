@@ -2,8 +2,9 @@ DEST = '0'
 WALL = '+'
 EMPTY = ' '
 GLASS = 'G'
+BROKEN_GLASS = 'B'
 CAT = 'C'
-MOVEABL_EENTITY = '_'
+MOVEABLE_ENTITY = '_'
 
 UP = 'w'
 DOWN = 's'
@@ -26,3 +27,15 @@ DIR_NOT_EXIST = 'Directory does not exist, play default games.'
 PRESS_ANY = 'The room is messed. Press any key to continue.'
 GAMEFILE_TEXT = 'Enter game directory:'
 WIN = 'Miao! All rooms are messed.'
+
+IMAGE_FOLDER = 'images/'
+TILE_IMAGES = {
+    WALL: 'wall.png',
+    EMPTY: 'empty.png'
+}
+
+MOVEABLE_ENTITY_IMAGES = {
+    CAT: 'cat.png',
+    GLASS: 'glass.png',
+    BROKEN_GLASS: 'broken_glass.png'
+}

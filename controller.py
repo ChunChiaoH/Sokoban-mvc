@@ -4,7 +4,7 @@ from view import TextView
 from constants import *
 
 
-class Controller():
+class Controller:
     def __init__(self,
                  model: Model,
                  view: TextView) -> None:

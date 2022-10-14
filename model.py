@@ -46,7 +46,7 @@ class Dest(BasicTile):
 
 
 class MoveableEntity:
-    _symbol = MOVEABL_EENTITY
+    _symbol = MOVEABLE_ENTITY
 
     def __init__(self, pos: tuple[int, int]) -> None:
         self._row, self._col = pos
@@ -63,10 +63,16 @@ class MoveableEntity:
 
 
 class Glass(MoveableEntity):
-    _symbol = GLASS
 
     def __init__(self, pos: tuple[int, int]) -> None:
         super().__init__(pos)
+        self._symbol = GLASS
+
+    def broken(self) -> None:
+        self._symbol = BROKEN_GLASS
+
+    def unbroken(self) -> None:
+        self._symbol = GLASS
 
 
 class Cat(MoveableEntity):
@@ -118,6 +124,9 @@ class Room:
     def get_tile(self, row: int, col: int) -> str:
         return self._tiles[row][col]
 
+    def get_tiles(self) -> list[list[BasicTile]]:
+        return self._tiles
+
     def move_glass(self, box: Glass, delta: tuple[int, int]) -> None:
         del self._glasses[box.get_pos()]
         box.move(delta)
@@ -126,6 +135,11 @@ class Room:
     def update_dests(self) -> None:
         for k in self._dest_filled:
             self._dest_filled[k] = True if k in self._glasses else False
+        for k in self._glasses:
+            if k in self._dest_filled:
+                self._glasses[k].broken()
+            else:
+                self._glasses[k].unbroken()
 
     def all_filled(self) -> bool:
         return all(self._dest_filled.values())
