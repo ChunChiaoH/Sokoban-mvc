@@ -1,7 +1,6 @@
 # Sokoban-mvc
+##The game is still in development, more functions(design game map, AI help,...) and maps will be added later.
+#### Double click graphical_game() to play the game, to aim is to control the Cat and push all the Glass to locations with a hole.
 
-## This is now a text-based game, a graphical interface is still in development.
-#### Double click main() to play the game, to aim is to control the 'C' symbol and push all the 'G' symbol to locations with '0' symbol.
-
-#### The gif below demonstrates how will the game look like with graphical user interface.  
-![](demo.gif)   
+#### The gif below demonstrates how the game look like.  
+![](demo.gif)
