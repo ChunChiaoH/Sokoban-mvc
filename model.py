@@ -158,6 +158,7 @@ class Model:
         self._cur_room = None
         self._cat = None
         self.load_game()
+        self._skip_keyboard = False
 
     def load_game(self) -> None:
         with open(os.path.join(os.getcwd(), self._game_dir, self._rooms[self._cur_room_num])) as tiles:
@@ -169,6 +170,12 @@ class Model:
             room.set_playground(cols)
             self._cat = Cat(room.get_cat_start())
             self._cur_room = room
+
+    def skip_keyboard(self) -> bool:
+        return self._skip_keyboard
+
+    def keyboard_switch(self) -> None:
+        self._skip_keyboard = not self._skip_keyboard
 
     def set_cat(self, cat_pos: tuple[int, int]) -> None:
         self._cat = Cat(cat_pos)
@@ -184,13 +191,18 @@ class Model:
 
     def get_room(self) -> Room:
         return self._cur_room
-
+    def get_cur_dimension(self) -> tuple[int, int]:
+        return self._cur_room.get_dimension()
     def level_up(self) -> None:
         self._cur_room_num += 1
         self.load_game()
+        self._skip_keyboard = True
 
     def room_messed(self) -> bool:
         return self._cur_room.all_filled()
+
+    def all_room_messed(self) -> bool:
+        return self._cur_room_num + 1 > self.get_num_rooms()
 
     def attempt_push_glass(self, glass: Glass, delta: tuple[int, int]) -> None:
         row, col = glass.get_pos()
