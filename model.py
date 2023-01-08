@@ -127,10 +127,10 @@ class Room:
     def get_tiles(self) -> list[list[BasicTile]]:
         return self._tiles
 
-    def move_glass(self, box: Glass, delta: tuple[int, int]) -> None:
-        del self._glasses[box.get_pos()]
-        box.move(delta)
-        self._glasses[box.get_pos()] = box
+    def move_glass(self, glass: Glass, delta: tuple[int, int]) -> None:
+        del self._glasses[glass.get_pos()]
+        glass.move(delta)
+        self._glasses[glass.get_pos()] = glass
 
     def update_dests(self) -> None:
         for k in self._dest_filled:
@@ -191,8 +191,10 @@ class Model:
 
     def get_room(self) -> Room:
         return self._cur_room
+
     def get_cur_dimension(self) -> tuple[int, int]:
         return self._cur_room.get_dimension()
+
     def level_up(self) -> None:
         self._cur_room_num += 1
         self.load_game()
