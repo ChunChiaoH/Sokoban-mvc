@@ -76,7 +76,7 @@ class RoomCanvas(tk.Canvas):
         self._tile_imgs = self._load_imgs(TILE_IMAGES)
         self._entity_imgs = self._load_imgs(MOVEABLE_ENTITY_IMAGES)
 
-    def _load_imgs(self, img_paths: dict[str: str]) -> dict[str: tk.Image]:
+    def _load_imgs(self, img_paths: dict[str, str]) -> dict[str, tk.Image]:
         return {name: ImageTk.PhotoImage(
         Image.open(IMAGE_FOLDER + path).resize(self._img_size))
                          for name, path in img_paths.items()}

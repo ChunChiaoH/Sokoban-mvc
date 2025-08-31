@@ -115,7 +115,7 @@ class Room:
     def get_cat_start(self) -> tuple[int, int]:
         return self._cat_start
 
-    def get_glasses(self) -> dict[tuple[int, int]: Glass]:
+    def get_glasses(self) -> dict[tuple[int, int], Glass]:
         return self._glasses
 
     def get_glass(self, row: int, col: int) -> Glass:
@@ -161,15 +161,19 @@ class Model:
         self._skip_keyboard = False
 
     def load_game(self) -> None:
-        with open(os.path.join(os.getcwd(), self._game_dir, self._rooms[self._cur_room_num])) as tiles:
-            cols = []
-            for col in tiles:
-                cols.append(col.strip('\n'))
-            num_rows, num_cols = len(cols), len(cols[0])
-            room = Room(num_rows, num_cols)
-            room.set_playground(cols)
-            self._cat = Cat(room.get_cat_start())
-            self._cur_room = room
+        try:
+            with open(os.path.join(os.getcwd(), self._game_dir, self._rooms[self._cur_room_num])) as tiles:
+                cols = []
+                for col in tiles:
+                    cols.append(col.strip('\n'))
+                num_rows, num_cols = len(cols), len(cols[0])
+                room = Room(num_rows, num_cols)
+                room.set_playground(cols)
+                self._cat = Cat(room.get_cat_start())
+                self._cur_room = room
+        except (FileNotFoundError, IndexError) as e:
+            print(f"Error loading game file: {e}")
+            raise
 
     def skip_keyboard(self) -> bool:
         return self._skip_keyboard
@@ -219,9 +223,7 @@ class Model:
 
     def within_boundary(self, row: int, col: int) -> bool:
         max_row, max_col = self._cur_room.get_dimension()
-        if row < 0 or col < 0 or row >= max_row or col >= max_col:
-            return False
-        return True
+        return 0 <= row < max_row and 0 <= col < max_col
 
     def move_cat(self, delta: tuple[int, int]) -> None:
         cur_row, cur_col = self._cat.get_pos()

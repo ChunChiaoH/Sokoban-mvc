@@ -23,17 +23,30 @@ LEFT_ARROW = 37
 RIGHT = 68 #'a'
 RIGHT_ARROW = 39
 
-ARROWS = {}
-MOVE_CODES = {
-    UP: (-1, 0),
-    UP_ARROW: (-1, 0),
-    DOWN: (1, 0),
-    DOWN_ARROW: (1, 0),
-    LEFT: (0, -1),
-    LEFT_ARROW: (0, -1),
-    RIGHT: (0, 1),
-    RIGHT_ARROW: (0, 1)
+# Unified movement system
+MOVE_DIRECTIONS = {
+    'UP': {
+        'delta': (-1, 0),
+        'keys': [UP, UP_ARROW],
+        'char': 'w'
+    },
+    'DOWN': {
+        'delta': (1, 0),
+        'keys': [DOWN, DOWN_ARROW],
+        'char': 's'
+    },
+    'LEFT': {
+        'delta': (0, -1),
+        'keys': [LEFT, LEFT_ARROW],
+        'char': 'a'
+    },
+    'RIGHT': {
+        'delta': (0, 1),
+        'keys': [RIGHT, RIGHT_ARROW],
+        'char': 'd'
+    }
 }
+
 
 END_GAME = 'end'
 
@@ -43,7 +56,7 @@ TITLE = 'SOKOBAN'
 PROMPT_TEXT = 'Enter a move(w,a,s,d) or "end" to quit:'
 DEFAULT_GAMES = 'games/default'
 DIR_NOT_EXIST = 'Directory does not exist, play default games.'
-PRESS_ANY = 'The room is messed. Press any key to continue.'
+PRESS_ANY = 'This room is messed. Press any key to continue.'
 GAMEFILE_TEXT = 'Enter game directory:'
 WIN_TITLE = 'Won!'
 WIN = 'Miao! All rooms are messed.'
@@ -63,3 +76,14 @@ MOVEABLE_ENTITY_IMAGES = {
     GLASS: 'glass.png',
     BROKEN_GLASS: 'broken_glass.png'
 }
+
+# AI Solver Messages
+AI_SOLVER_TITLE = 'AI Solver'
+AI_HINT_TITLE = 'AI Hint'
+AI_SOLVING_MSG = 'Solving puzzle... This may take a moment.'
+AI_NO_SOLUTION_MSG = 'No solution found!'
+AI_ALREADY_SOLVED_MSG = 'Puzzle is already solved!'
+AI_SOLUTION_FOUND_MSG = 'Solution found in {} moves! Watch the AI play.'
+AI_SOLUTION_COMPLETE_MSG = 'Solution complete!'
+AI_PUZZLE_SOLVED_MSG = 'Puzzle solved by AI!'
+AI_TRY_MOVING_MSG = 'Try moving {}'
