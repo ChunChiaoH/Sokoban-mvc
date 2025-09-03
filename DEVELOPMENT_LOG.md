@@ -43,36 +43,59 @@
 - ✅ Implemented `/api/init` endpoint - successfully converts game state to JSON
 - ✅ **TESTED:** API returns proper JSON with game state, room info
 
+#### 5. **Complete Flask API Implementation**
+- ✅ Added `/api/move` POST endpoint with JSON request handling
+- ✅ Added `/api/hint` GET endpoint using existing AI solver
+- ✅ **LEARNED:** POST vs GET requests, JSON validation, error handling
+- ✅ **LEARNED:** Thread-local storage and request isolation in Flask
+- ✅ **LEARNED:** Difference between action-oriented vs REST APIs
+- ✅ Used constants from `constants.py` instead of hardcoded messages
+- ✅ Created `utils.py` for shared functions (eliminated code duplication)
+- ✅ Both desktop and web controllers now use same utility functions
+
+#### 6. **HTML5 Canvas Frontend**
+- ✅ Created `templates/index.html` with complete web game interface
+- ✅ HTML5 Canvas for visual game rendering
+- ✅ JavaScript for user interaction (keyboard controls, API calls)
+- ✅ Updated Flask to serve HTML template with `render_template()`
+- ✅ **READY TO TEST:** Complete web version of Sokoban game
+
 ### 🚧 **IN PROGRESS:**
-- Adding move handling route (`/api/move` endpoint)
+- Testing complete web game functionality
 
 ### 📋 **TODO - Next Session:**
 
-#### Immediate Next Steps:
-1. **Complete Flask Backend:**
-   ```python
-   @app.route('/api/move', methods=['POST'])
-   def move():
-       # Handle player moves via JSON
+#### **🚨 LEARNING ITEMS TO REVIEW:**
+1. **HTML5 & JavaScript Concepts** (user requested explanation):
+   - How `render_template('index.html')` works step-by-step
+   - HTML5 Canvas as digital drawing board concept
+   - JavaScript event handling and API communication
+   - Complete frontend-backend communication flow
+   - Browser vs Flask responsibilities
+
+#### **Immediate Testing Tasks:**
+1. **Test Complete Web Game:**
+   ```bash
+   # Activate environment:
+   source ./venv_sokoban_web/Scripts/activate
    
-   @app.route('/api/hint') 
-   def get_hint():
-       # AI hint endpoint
+   # Start server:
+   python web_app.py
+   
+   # Visit: http://localhost:5000
    ```
+   
+2. **Verify All Features Work:**
+   - Game initialization (Start Game button)
+   - Movement controls (WASD/arrows)  
+   - AI hints (Get Hint button)
+   - Game state display and updates
+   - Room completion detection
 
-2. **Create HTML5 Canvas Frontend:**
-   - Create `templates/index.html` 
-   - JavaScript game rendering with Canvas
-   - Movement controls (WASD/arrows)
-   - API communication (fetch requests)
-
-3. **Add WebSocket Support:**
-   - Real-time AI solver visualization
-   - Step-by-step move animation
-
-4. **Deploy & Test:**
-   - Test full web version
-   - Compare Flask vs PyScript approach
+3. **Debug and Polish:**
+   - Fix any canvas drawing issues
+   - Improve error handling
+   - Test with different room layouts
 
 #### Future Enhancements:
 - **A* search algorithm** (more efficient than BFS)
@@ -164,8 +187,10 @@ pillow==11.3.0
 - **Branch:** `feature/flask-web-version` 
 - **Virtual env:** `venv_sokoban_web` (clean, Flask installed)
 - **Flask server:** `python web_app.py` → http://localhost:5000
-- **Working API:** `/api/init` returns game state JSON
+- **Complete API:** `/api/init`, `/api/move`, `/api/hint` all implemented
+- **Frontend:** HTML5 Canvas game interface ready
 - **Game logic:** Unchanged, reused through Flask interface
+- **New files:** `utils.py`, `templates/index.html`
 
 ### **KEY FILES TO KNOW:**
 - `web_app.py` - Flask server (partially complete)

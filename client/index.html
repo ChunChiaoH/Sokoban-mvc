@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sokoban - Clean Architecture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        #gameCanvas {
+            border: 2px solid #333;
+            background-color: #fff;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .game-info {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        
+        .instructions {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐱 Sokoban - Clean Architecture</h1>
+        
+        <div class="game-info" id="gameInfo">
+            Room 1 of 5
+        </div>
+        
+        <div class="status" id="status" style="display: none;"></div>
+        
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        
+        <div class="controls">
+            <button id="resetBtn">Reset Room</button>
+            <button id="hintBtn">Get Hint</button>
+            <button id="nextBtn" style="display: none;">Next Room</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>Controls:</h3>
+            <p><strong>Arrow Keys or WASD:</strong> Move the cat</p>
+            <p><strong>Goal:</strong> Push all glasses (G) onto destinations (0)</p>
+            <p><strong>Hint:</strong> Click "Get Hint" for AI suggestions</p>
+        </div>
+    </div>
+
+    <script>
+        // Namespace to avoid global pollution
+        const SokobanGame = (function() {
+            'use strict';
+            
+            // Configuration
+            const CONFIG = {
+                TILE_SIZE: 40,
+                CANVAS_WIDTH: 600,
+                CANVAS_HEIGHT: 600
+            };
+            
+            // Game constants
+            const SYMBOLS = Object.freeze({
+                EMPTY: ' ',
+                WALL: '+',
+                DEST: '0',
+                CAT: 'C',
+                GLASS: 'G',
+                GLASS_ON_DEST: 'H'
+            });
+            
+            const DIRECTIONS = Object.freeze({
+                'UP': [-1, 0],
+                'DOWN': [1, 0], 
+                'LEFT': [0, -1],
+                'RIGHT': [0, 1]
+            });
+            
+            const KEY_MAPPINGS = Object.freeze({
+                'ArrowUp': 'UP', 'w': 'UP', 'W': 'UP',
+                'ArrowDown': 'DOWN', 's': 'DOWN', 'S': 'DOWN',
+                'ArrowLeft': 'LEFT', 'a': 'LEFT', 'A': 'LEFT',
+                'ArrowRight': 'RIGHT', 'd': 'RIGHT', 'D': 'RIGHT'
+            });
+            
+            // Sample rooms data
+            const SAMPLE_ROOMS = [
+                {
+                    layout: [
+                        "++++++++",
+                        "+      +",
+                        "+ C G 0+", 
+                        "+      +",
+                        "++++++++"
+                    ],
+                    description: "Simple tutorial room"
+                },
+                {
+                    layout: [
+                        "++++++++++",
+                        "+    +   +",
+                        "+ C  G 0 +",
+                        "+    +   +",
+                        "++++++++++",
+                    ],
+                    description: "Easy room with obstacle"
+                }
+            ];
+            
+            // Game State Management
+            class GameState {
+                constructor() {
+                    this.reset();
+                }
+                
+                reset() {
+                    this.currentRoom = 0;
+                    this.rooms = [...SAMPLE_ROOMS];
+                    this.catPosition = [0, 0];
+                    this.tiles = [];
+                    this.glasses = [];
+                    this.dimensions = [0, 0];
+                }
+                
+                // Deep copy for solver
+                clone() {
+                    const cloned = new GameState();
+                    cloned.currentRoom = this.currentRoom;
+                    cloned.rooms = this.rooms; // Rooms don't change, can share reference
+                    cloned.catPosition = [...this.catPosition];
+                    cloned.tiles = this.tiles.map(row => [...row]);
+                    cloned.glasses = this.glasses.map(glass => ({
+                        position: [...glass.position],
+                        type: glass.type
+                    }));
+                    cloned.dimensions = [...this.dimensions];
+                    return cloned;
+                }
+                
+                toHash() {
+                    return JSON.stringify({
+                        cat: this.catPosition,
+                        glasses: this.glasses.map(g => ({ pos: g.position, type: g.type }))
+                    });
+                }
+                
+                isWinState() {
+                    return this.glasses.every(glass => glass.type === SYMBOLS.GLASS_ON_DEST);
+                }
+            }
+            
+            // Game Engine - Pure logic, no rendering
+            class GameEngine {
+                constructor() {
+                    this.state = new GameState();
+                }
+                
+                loadRoom(roomIndex) {
+                    if (roomIndex >= this.state.rooms.length) {
+                        return { success: false, message: '🎉 All rooms completed!' };
+                    }
+                    
+                    this.state.currentRoom = roomIndex;
+                    const room = this.state.rooms[roomIndex];
+                    
+                    try {
+                        this.parseRoom(room.layout);
+                        return { 
+                            success: true, 
+                            message: `Room ${roomIndex + 1}: ${room.description}` 
+                        };
+                    } catch (error) {
+                        console.error('Failed to load room:', error);
+                        return { success: false, message: 'Failed to load room' };
+                    }
+                }
+                
+                parseRoom(layout) {
+                    if (!layout || !Array.isArray(layout)) {
+                        throw new Error('Invalid room layout');
+                    }
+                    
+                    const rows = layout.length;
+                    const cols = layout[0]?.length || 0;
+                    
+                    this.state.dimensions = [rows, cols];
+                    this.state.tiles = [];
+                    this.state.glasses = [];
+                    
+                    for (let i = 0; i < rows; i++) {
+                        this.state.tiles[i] = [];
+                        const row = layout[i] || '';
+                        
+                        for (let j = 0; j < cols; j++) {
+                            const char = row[j] || SYMBOLS.EMPTY;
+                            
+                            switch (char) {
+                                case 'C':
+                                    this.state.catPosition = [i, j];
+                                    this.state.tiles[i][j] = SYMBOLS.EMPTY;
+                                    break;
+                                case 'G':
+                                    this.state.glasses.push({
+                                        position: [i, j],
+                                        type: SYMBOLS.GLASS
+                                    });
+                                    this.state.tiles[i][j] = SYMBOLS.EMPTY;
+                                    break;
+                                case 'H':
+                                    this.state.glasses.push({
+                                        position: [i, j],
+                                        type: SYMBOLS.GLASS_ON_DEST
+                                    });
+                                    this.state.tiles[i][j] = SYMBOLS.DEST;
+                                    break;
+                                default:
+                                    this.state.tiles[i][j] = char;
+                            }
+                        }
+                    }
+                }
+                
+                makeMove(direction) {
+                    if (!DIRECTIONS[direction]) {
+                        return { success: false, message: 'Invalid direction' };
+                    }
+                    
+                    const [dRow, dCol] = DIRECTIONS[direction];
+                    const [catRow, catCol] = this.state.catPosition;
+                    const newRow = catRow + dRow;
+                    const newCol = catCol + dCol;
+                    
+                    // Bounds check
+                    if (!this.isValidPosition(newRow, newCol)) {
+                        return { success: false, message: 'Out of bounds' };
+                    }
+                    
+                    // Wall check
+                    if (this.state.tiles[newRow][newCol] === SYMBOLS.WALL) {
+                        return { success: false, message: 'Wall collision' };
+                    }
+                    
+                    // Glass handling
+                    const glassAtTarget = this.findGlassAt(newRow, newCol);
+                    if (glassAtTarget) {
+                        const pushResult = this.tryPushGlass(glassAtTarget, dRow, dCol);
+                        if (!pushResult.success) {
+                            return pushResult;
+                        }
+                    }
+                    
+                    // Move cat
+                    this.state.catPosition = [newRow, newCol];
+                    
+                    const isWin = this.state.isWinState();
+                    return { 
+                        success: true, 
+                        message: isWin ? '🎉 Room completed!' : 'Move successful',
+                        isWin: isWin
+                    };
+                }
+                
+                tryPushGlass(glass, dRow, dCol) {
+                    const [glassRow, glassCol] = glass.position;
+                    const newGlassRow = glassRow + dRow;
+                    const newGlassCol = glassCol + dCol;
+                    
+                    if (!this.isValidPosition(newGlassRow, newGlassCol)) {
+                        return { success: false, message: 'Cannot push glass out of bounds' };
+                    }
+                    
+                    if (this.state.tiles[newGlassRow][newGlassCol] === SYMBOLS.WALL) {
+                        return { success: false, message: 'Cannot push glass into wall' };
+                    }
+                    
+                    if (this.findGlassAt(newGlassRow, newGlassCol)) {
+                        return { success: false, message: 'Cannot push glass into another glass' };
+                    }
+                    
+                    // Move the glass
+                    glass.position = [newGlassRow, newGlassCol];
+                    glass.type = (this.state.tiles[newGlassRow][newGlassCol] === SYMBOLS.DEST) ? 
+                        SYMBOLS.GLASS_ON_DEST : SYMBOLS.GLASS;
+                    
+                    return { success: true };
+                }
+                
+                isValidPosition(row, col) {
+                    const [maxRow, maxCol] = this.state.dimensions;
+                    return row >= 0 && row < maxRow && col >= 0 && col < maxCol;
+                }
+                
+                findGlassAt(row, col) {
+                    return this.state.glasses.find(glass => 
+                        glass.position[0] === row && glass.position[1] === col
+                    );
+                }
+                
+                reset() {
+                    this.loadRoom(this.state.currentRoom);
+                }
+                
+                nextRoom() {
+                    return this.loadRoom(this.state.currentRoom + 1);
+                }
+            }
+            
+            // AI Solver - BFS implementation
+            class AISolver {
+                constructor(gameEngine) {
+                    this.gameEngine = gameEngine;
+                }
+                
+                getHint() {
+                    try {
+                        const solution = this.solveBFS();
+                        if (solution && solution.length > 0) {
+                            const firstMove = solution[0];
+                            const directionName = this.moveToDirection(firstMove);
+                            return {
+                                success: true,
+                                hint: directionName,
+                                message: `💡 Hint: Try moving ${directionName.toLowerCase()}`
+                            };
+                        } else {
+                            return {
+                                success: false,
+                                message: 'No solution found or puzzle already solved!'
+                            };
+                        }
+                    } catch (error) {
+                        console.error('Solver error:', error);
+                        return {
+                            success: false,
+                            message: 'Error finding solution'
+                        };
+                    }
+                }
+                
+                solveBFS() {
+                    const startState = this.gameEngine.state.clone();
+                    const queue = [startState];
+                    const visited = new Set();
+                    const parent = new Map();
+                    
+                    while (queue.length > 0) {
+                        const currentState = queue.shift();
+                        const currentHash = currentState.toHash();
+                        
+                        if (visited.has(currentHash)) continue;
+                        visited.add(currentHash);
+                        
+                        if (currentState.isWinState()) {
+                            return this.reconstructPath(parent, currentHash);
+                        }
+                        
+                        // Try all possible moves
+                        for (const [direction, move] of Object.entries(DIRECTIONS)) {
+                            const newState = this.simulateMove(currentState, move);
+                            if (newState) {
+                                const newHash = newState.toHash();
+                                if (!visited.has(newHash) && !parent.has(newHash)) {
+                                    queue.push(newState);
+                                    parent.set(newHash, { hash: currentHash, move: move });
+                                }
+                            }
+                        }
+                    }
+                    
+                    return null; // No solution found
+                }
+                
+                simulateMove(state, [dRow, dCol]) {
+                    const newState = state.clone();
+                    const [catRow, catCol] = newState.catPosition;
+                    const newRow = catRow + dRow;
+                    const newCol = catCol + dCol;
+                    
+                    // Use game engine logic for consistency
+                    const tempEngine = new GameEngine();
+                    tempEngine.state = newState;
+                    
+                    // Find direction name for the move
+                    const direction = Object.keys(DIRECTIONS).find(key => 
+                        DIRECTIONS[key][0] === dRow && DIRECTIONS[key][1] === dCol
+                    );
+                    
+                    const result = tempEngine.makeMove(direction);
+                    return result.success ? newState : null;
+                }
+                
+                reconstructPath(parent, endHash) {
+                    const path = [];
+                    let current = endHash;
+                    
+                    while (parent.has(current)) {
+                        const parentInfo = parent.get(current);
+                        path.unshift(parentInfo.move);
+                        current = parentInfo.hash;
+                    }
+                    
+                    return path;
+                }
+                
+                moveToDirection(move) {
+                    return Object.keys(DIRECTIONS).find(key => 
+                        DIRECTIONS[key][0] === move[0] && DIRECTIONS[key][1] === move[1]
+                    ) || 'UNKNOWN';
+                }
+            }
+            
+            // Renderer - Handles all drawing
+            class GameRenderer {
+                constructor(canvasId) {
+                    this.canvas = document.getElementById(canvasId);
+                    if (!this.canvas) {
+                        throw new Error(`Canvas element '${canvasId}' not found`);
+                    }
+                    this.ctx = this.canvas.getContext('2d');
+                }
+                
+                render(gameState) {
+                    if (!gameState) return;
+                    
+                    const [rows, cols] = gameState.dimensions;
+                    
+                    // Clear canvas
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Draw tiles
+                    for (let i = 0; i < rows; i++) {
+                        for (let j = 0; j < cols; j++) {
+                            const tile = gameState.tiles[i][j];
+                            this.drawTile(j * CONFIG.TILE_SIZE, i * CONFIG.TILE_SIZE, tile);
+                        }
+                    }
+                    
+                    // Draw cat
+                    const [catRow, catCol] = gameState.catPosition;
+                    this.drawEntity(
+                        catCol * CONFIG.TILE_SIZE, 
+                        catRow * CONFIG.TILE_SIZE, 
+                        SYMBOLS.CAT, 
+                        '#ff6b35'
+                    );
+                    
+                    // Draw glasses
+                    gameState.glasses.forEach(glass => {
+                        const [glassRow, glassCol] = glass.position;
+                        const color = (glass.type === SYMBOLS.GLASS_ON_DEST) ? '#4CAF50' : '#2196F3';
+                        this.drawEntity(
+                            glassCol * CONFIG.TILE_SIZE, 
+                            glassRow * CONFIG.TILE_SIZE, 
+                            SYMBOLS.GLASS, 
+                            color
+                        );
+                    });
+                }
+                
+                drawTile(x, y, tileType) {
+                    this.ctx.fillStyle = this.getTileColor(tileType);
+                    this.ctx.fillRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                    
+                    // Draw border
+                    this.ctx.strokeStyle = '#ccc';
+                    this.ctx.strokeRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                    
+                    // Draw tile symbol
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.font = '20px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(tileType, x + CONFIG.TILE_SIZE/2, y + CONFIG.TILE_SIZE/2);
+                }
+                
+                drawEntity(x, y, symbol, color) {
+                    this.ctx.fillStyle = color;
+                    this.ctx.fillRect(x + 2, y + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+                    
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = 'bold 24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(symbol, x + CONFIG.TILE_SIZE/2, y + CONFIG.TILE_SIZE/2);
+                }
+                
+                getTileColor(tileType) {
+                    switch(tileType) {
+                        case SYMBOLS.WALL: return '#8B4513';
+                        case SYMBOLS.DEST: return '#ffeb3b';
+                        case SYMBOLS.EMPTY: return '#f5f5f5';
+                        default: return '#f5f5f5';
+                    }
+                }
+            }
+            
+            // UI Controller - Handles user interface
+            class UIController {
+                constructor() {
+                    this.statusElement = document.getElementById('status');
+                    this.gameInfoElement = document.getElementById('gameInfo');
+                    this.nextButton = document.getElementById('nextBtn');
+                }
+                
+                showStatus(message, type = 'success') {
+                    if (!this.statusElement) return;
+                    
+                    this.statusElement.textContent = message;
+                    this.statusElement.className = `status ${type}`;
+                    this.statusElement.style.display = 'block';
+                }
+                
+                updateGameInfo(currentRoom, totalRooms) {
+                    if (!this.gameInfoElement) return;
+                    this.gameInfoElement.textContent = `Room ${currentRoom + 1} of ${totalRooms}`;
+                }
+                
+                showNextButton() {
+                    if (this.nextButton) {
+                        this.nextButton.style.display = 'inline-block';
+                    }
+                }
+                
+                hideNextButton() {
+                    if (this.nextButton) {
+                        this.nextButton.style.display = 'none';
+                    }
+                }
+            }
+            
+            // Main Game Controller
+            class GameController {
+                constructor() {
+                    this.gameEngine = new GameEngine();
+                    this.aiSolver = new AISolver(this.gameEngine);
+                    this.renderer = new GameRenderer('gameCanvas');
+                    this.ui = new UIController();
+                    
+                    this.initializeEventListeners();
+                    this.startGame();
+                }
+                
+                initializeEventListeners() {
+                    // Keyboard controls
+                    document.addEventListener('keydown', (event) => this.handleKeyPress(event));
+                    
+                    // Button controls
+                    document.getElementById('resetBtn')?.addEventListener('click', () => this.resetRoom());
+                    document.getElementById('hintBtn')?.addEventListener('click', () => this.getHint());
+                    document.getElementById('nextBtn')?.addEventListener('click', () => this.nextRoom());
+                }
+                
+                startGame() {
+                    const result = this.gameEngine.loadRoom(0);
+                    this.ui.updateGameInfo(0, this.gameEngine.state.rooms.length);
+                    this.renderer.render(this.gameEngine.state);
+                    this.ui.showStatus(result.message, result.success ? 'success' : 'error');
+                }
+                
+                handleKeyPress(event) {
+                    if (event.repeat) return; // Ignore key repeat
+                    
+                    const direction = KEY_MAPPINGS[event.key];
+                    if (direction) {
+                        event.preventDefault();
+                        this.makeMove(direction);
+                    }
+                }
+                
+                makeMove(direction) {
+                    const result = this.gameEngine.makeMove(direction);
+                    this.renderer.render(this.gameEngine.state);
+                    
+                    if (result.success) {
+                        if (result.isWin) {
+                            this.ui.showStatus(result.message, 'success');
+                            this.ui.showNextButton();
+                        }
+                    } else {
+                        this.ui.showStatus(result.message, 'error');
+                    }
+                }
+                
+                resetRoom() {
+                    this.gameEngine.reset();
+                    this.renderer.render(this.gameEngine.state);
+                    this.ui.hideNextButton();
+                    this.ui.showStatus('Room reset', 'success');
+                }
+                
+                getHint() {
+                    const result = this.aiSolver.getHint();
+                    this.ui.showStatus(result.message, result.success ? 'success' : 'error');
+                }
+                
+                nextRoom() {
+                    const result = this.gameEngine.nextRoom();
+                    if (result.success) {
+                        this.ui.updateGameInfo(
+                            this.gameEngine.state.currentRoom, 
+                            this.gameEngine.state.rooms.length
+                        );
+                        this.renderer.render(this.gameEngine.state);
+                        this.ui.hideNextButton();
+                        this.ui.showStatus(result.message, 'success');
+                    } else {
+                        this.ui.showStatus(result.message, 'success');
+                    }
+                }
+            }
+            
+            // Public API
+            return {
+                init: function() {
+                    new GameController();
+                },
+                // Expose classes for testing/extension
+                GameEngine,
+                AISolver,
+                GameRenderer,
+                CONFIG
+            };
+            
+        })();
+        
+        // Initialize game when DOM is loaded
+        document.addEventListener('DOMContentLoaded', SokobanGame.init);
+        
+    </script>
+</body>
+</html>
